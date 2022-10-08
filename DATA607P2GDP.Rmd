@@ -1,0 +1,58 @@
+---
+title: "Data 607 Project 2 GDP"
+author: "Neil Hodgkinson"
+date: "2022-10-06"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(readr)
+
+urlfile="https://raw.githubusercontent.com/Nhodgkinson/DATA-607-P2/main/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_4413598.csv"
+
+gdpdata<-read_csv(url(urlfile))
+
+gdpdata<-subset(gdpdata, select=-c(3,4)) #Removing columns indicator name and indicator code as we do not need it 
+
+
+```
+
+## Tidying
+
+The way the data is currently presented is in a "wide" format. Each year has it's own column and currently the data has over 60 columns. We want to view the data as "Country Name, Country Code, Year, GDP". The current problem with the layout is that some countries in the dataset don't exist during certain years. So the country row populates with a name and then a gdp only for the years it exists, the other values are "NA". When reordering the data in a tall format I will be able to simply remove the NA values from the year variable. 
+
+ Soviet Union, USSR, 1991, 2333030
+/Soviet Union, USSR, 1992, NA/(Removed)
+
+
+
+```{r data tidying}
+gdpdata #Let's look at how the data looks before tidying. As stated before, each column contains a year and value. This reduces the amount of rows but spreads it out over a widen area
+
+gdpdf<-gather(gdpdata, "Year", "GDP", 3:64) #Here I gather columns 3-64 into one column named "year" and the values of 3-64 as a new column called "GDP"
+
+gdpdf<-gdpdf[!is.na(gdpdf$GDP),] #I'm removing all NA values from the GDP column. They add no useful information and bloat the data
+
+gdpdf<- gdpdf %>%
+  arrange(`Country Name`)  #arranges the data by country name, A-Z
+  
+options(scipen = 100)#removes scientific notation from GDP so we see true values
+
+gdpdf #Now the data has the 4 desired columns, we don't have unnecessary NA values, and we can look at the analysis ask
+```
+
+## Analysis
+Benjamin, the original poster of this dataset in the weekly discussion post, wanted to see an analysis that looked at the % of GDP change by country year over year. Now we have the data arranged and tidied we can start to do that analysis
+
+```{r Analysis}
+gdpdf<-gdpdf %>%
+  group_by(`Country Name`) %>%
+  arrange(`Year`, .by_group = TRUE)%>%
+  mutate(`Percent Change` = (GDP/lag(GDP)-1)*100)
+gdpdf
+
+#I created a formula using "lag". Percent Change is row GDP value divided by lag(GDP)-1, or above row GDP value, multiplied by 100 to give me the percent of change year over year.
+```
