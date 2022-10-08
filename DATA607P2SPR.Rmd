@@ -1,0 +1,80 @@
+---
+title: "DATA607P2SPR"
+author: "Neil Hodgkinson"
+date: "2022-10-07"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(stringr)
+urlfile="https://raw.githubusercontent.com/Nhodgkinson/DATA-607-P2/main/student_results.csv"
+
+srpdata<-read_csv(url(urlfile))
+```
+## Tidying
+
+The  data is currently in a wide format and we need to tidy it up. I want gather the terms into one column and create a new column called score with the current spread out values under each term. Then we need to look at cleaning up some of the columns, ensuring they are the correct data types and so forth.
+
+```{r tidying}
+srpdata
+srdf<-gather(srpdata, "Term", "Score", 6:8)#Gathering the term columns and creating a new column for the score observations
+
+srdf$id <- as.character(srdf$id) #id is not a numeric value in this instance so we want to change it to a chr value
+ 
+Sex <- str_extract(srdf$`sex and age`, "\\D") #the next two steps remove the non digit character and makes a new column called "sex". Then I want to gather all digit characters plus any otherr digit potentially following the first digit and create a new column "Age"
+srdf$Sex<-Sex
+
+Age <- str_extract(srdf$`sex and age`, "\\d+")
+srdf$Age <-Age
+
+srdf<-subset(srdf, select=-c(4)) #removing "sex and age" from the df
+
+srdf<-srdf[,c(1,2,7,8,3:6)] #reordering columns
+
+srdf<-srdf %>%
+  arrange(id)
+
+
+
+```
+
+## Graph
+
+I want to see how individual test 1 scores compare to the avg score test 1 score. 
+
+```{r }
+#creating a df to graph
+t1df<-srdf %>%
+  mutate(`Avg Score` = sum(mean(Score))) %>%
+  arrange(Score)
+
+ ggplot(t1df,aes(Score))+geom_histogram(aes(color = `test number`, fill = `test number`), 
+                position = "identity", bins = 5, alpha = 0.4) +
+  scale_color_manual(values = c("#00AFBB", "#E7B800")) +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"))
+
+#creating a df to graph 
+t2df<- t1df%>%
+  group_by(Term)  %>%
+  subset(select=c(6:8))%>%
+  mutate(`Avg Score` = sum(mean(Score)))
+
+ ggplot(t2df,aes(Score))+geom_histogram(aes(color = Term, fill = Term), 
+                position = "identity", bins = 5, alpha = 0.4) +
+  scale_color_manual(values = c("#CC0000", "#006600", "#669999")) +
+  scale_fill_manual(values = c("#CC0000", "#006600", "#669999"))
+ 
+ 
+ggplot(t2df, aes(x = Score, fill = Term)) +
+    geom_bar() +
+    theme_classic()
+```
+
+##Observations
+ Students tended to score higher on test 2 according to the above graph. In the second graph I wanted to see how scores were distributed by term. Interestingly the distribution of scores for the third term were spread out while term 1 and 2 saw a similar peak. I made a second graph showing the same findings but in a bar chart because the fill for the second histogram is a little hard to read.
