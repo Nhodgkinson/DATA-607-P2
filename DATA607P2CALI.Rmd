@@ -1,0 +1,79 @@
+---
+title: "DATA607 Project 2 Cali Rain"
+author: "Neil Hodgkinson"
+date: "2022-10-07"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+
+urlfile="https://raw.githubusercontent.com/Nhodgkinson/DATA-607-P2/main/cdec-monthly-precipitation-san-joaquin-1913-2014.csv"
+
+calidata<-read_csv(url(urlfile))
+
+```
+
+## Tidying
+
+I initially began working on gathering the data with the assumption that I would want a month over month view. I saw how much data there was and felt that the year over year was a better approach with an avg rain fall by month would be more insightful.  
+
+```{r tidying} 
+calidata
+#Year over Year info
+cyeardf<-calidata[,c(1,2,15)]
+
+cyeardf<- cyeardf %>%
+  rename(Year = WY) %>%
+  mutate(`Avg Rain` = mean(Total))
+
+#Month Avgs
+cmdf<-gather(calidata, "Month", "n", 3:14)
+
+cmdf<-cmdf %>%
+  rename(Year = WY) %>%
+  group_by(Month) %>%
+   mutate(`Avg Rain` = mean(n))%>%
+  subset(select=-c(3))#2,5
+
+#cmdf<-cmdf[!duplicated(cmdf), ]
+
+
+cmdf
+cyeardf
+
+
+```
+
+## Analysis
+I have two tables, one that includes month and another that only has year over year. I know the avg rain by month and the avg rain by year. I can now create two graphs and see if the month precipitation compared to the avg expected and the yearly total to the avg expected.
+
+```{r analysis}
+
+#For the month view I want to look at only January month data. But over 100 years is a lot of data to look at for a visual so lets only look at the past 20 years. 1994 to 2014.
+
+
+Jandf<-cmdf %>%
+  subset( Month == "Jan") %>%
+  subset(Year > 1993)
+
+ ggplot(Jandf,aes(Year,n))+geom_point()+geom_hline(yintercept=Jandf$`Avg Rain`,color="red")
+ 
+#Repeating the above steps for a year over year look compared to the avg. This time we will look back to 1984 through 2004
+ 
+ Ydf<-cyeardf%>%
+   subset(Year > 1983 & Year < 2005)
+
+ ggplot(Ydf,aes(Year, Total))+geom_point()+geom_hline(yintercept=Ydf$`Avg Rain`,color="red")
+
+```
+
+##Observation
+The month graph for Jan 94 to Jan 2014 shows 95 and 97 having much higher rainfall with around 20 inches for the month compared to the avg Jan rainfall of 6.8 inches. 
+
+When looking at the Year graph we see 95 has a very high rain fall at 70 inches for the year with the yearly avg at 38.55 inches. As seen in the Month graph, 95 had high rainfall in January with around 20 inches. 1997 is the second highest year for rain fall between 1984 andf 2004 with 65 inches. It was also showing very high monthly rain fall.
